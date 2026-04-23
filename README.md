@@ -1,7 +1,7 @@
 # LiftLog — IS4447 Assignment
 
 **Student Number:** 122368531  
-**Option:** A — Habit Tracker (adapted for gym sessions)
+**Option:** A — Habit Tracker (adapted for gym session tracking)
 
 ## GitHub Repository
 https://github.com/Davy47635/LiftLog
@@ -22,3 +22,6 @@ https://expo.dev/accounts/davykyc/projects/liftlog/updates/d6576abd-7272-4cc7-97
 - Streak tracking on home screen
 - Dark/light mode toggle
 - CSV export
+
+## Note on AI Assistance
+I used Claude (claude.ai) as an AI assistant during development to help with debugging, code suggestions and problem solving. All code was reviewed, understood and implemented by me.
