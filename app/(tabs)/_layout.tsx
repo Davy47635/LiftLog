@@ -1,4 +1,4 @@
-import { ThemeProvider } from '@/constants/ThemeContext';
+import { ThemeProvider } from '@/constants/themecontext';
 import { db } from '@/db/index';
 import { runMigrations } from '@/db/migrate';
 import { users } from '@/db/schema';
