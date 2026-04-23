@@ -1,6 +1,6 @@
 import { DarkColors, LightColors } from '@/constants/theme';
 import { db } from '@/db/index';
-import { users } from '@/db/schema';
+import { categories, users, workouts } from '@/db/schema';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eq } from 'drizzle-orm';
@@ -8,6 +8,7 @@ import { router } from 'expo-router';
 import { useContext, useEffect, useState } from 'react';
 import {
     Alert,
+    Share,
     StyleSheet,
     Switch,
     Text,
@@ -32,6 +33,39 @@ export default function ProfileScreen() {
         const next = !isDark;
         setIsDark(next);
         await AsyncStorage.setItem('theme', next ? 'dark' : 'light');
+    };
+
+    const handleExportCSV = async () => {
+        try {
+            const stored = await AsyncStorage.getItem('userId');
+            if (!stored) return;
+            const userId = parseInt(stored);
+
+            const rows = await db
+                .select({
+                    date: workouts.date,
+                    durationMins: workouts.durationMins,
+                    notes: workouts.notes,
+                    categoryName: categories.name,
+                })
+                .from(workouts)
+                .innerJoin(categories, eq(workouts.categoryId, categories.id))
+                .where(eq(workouts.userId, userId));
+
+            const header = 'Date,Category,Duration (mins),Notes\n';
+            const csvRows = rows.map((r) =>
+                `${r.date},${r.categoryName},${r.durationMins},"${r.notes ?? ''}"`
+            );
+            const csv = header + csvRows.join('\n');
+
+            await Share.share({
+                message: csv,
+                title: 'LiftLog Export',
+            });
+        } catch (e) {
+            console.error(e);
+            Alert.alert('Error', 'Could not export data');
+        }
     };
 
     const handleLogout = async () => {
@@ -100,6 +134,15 @@ export default function ProfileScreen() {
                             accessibilityLabel="Toggle dark mode"
                         />
                     </View>
+
+                    <TouchableOpacity
+                        style={[styles.btn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
+                        onPress={handleExportCSV}
+                        accessibilityLabel="Export CSV"
+                    >
+                        <Ionicons name="download-outline" size={20} color={colors.text} />
+                        <Text style={[styles.btnText, { color: colors.text }]}>Export Workouts CSV</Text>
+                    </TouchableOpacity>
 
                     <TouchableOpacity
                         style={[styles.btn, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}
