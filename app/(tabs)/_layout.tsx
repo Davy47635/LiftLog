@@ -1,60 +1,26 @@
-import { ThemeProvider } from '@/constants/themecontext';
-import { db } from '@/db/index';
-import { runMigrations } from '@/db/migrate';
-import { users } from '@/db/schema';
-import { seedDatabase } from '@/db/seed';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { eq } from 'drizzle-orm';
-import { Stack, router } from 'expo-router';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { Colors } from '@/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from 'expo-router';
 
-export type User = {
-  id: number;
-  name: string;
-  email: string;
-};
-
-type AuthContextType = {
-  user: User | null;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>;
-};
-
-export const AuthContext = createContext<AuthContextType | null>(null);
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
-export default function RootLayout() {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const init = async () => {
-      await runMigrations();
-      const storedId = await AsyncStorage.getItem('userId');
-      if (storedId) {
-        const rows = await db
-          .select()
-          .from(users)
-          .where(eq(users.id, parseInt(storedId)));
-        if (rows.length > 0) {
-          const u = rows[0];
-          setUser({ id: u.id, name: u.name, email: u.email });
-          await seedDatabase(u.id);
-          router.replace('/(tabs)');
-          return;
-        }
-      }
-      router.replace('/login');
-    };
-    void init();
-  }, []);
-
+export default function TabLayout() {
   return (
-    <ThemeProvider>
-      <AuthContext.Provider value={{ user, setUser }}>
-        <Stack screenOptions={{ headerShown: false }} />
-      </AuthContext.Provider>
-    </ThemeProvider>
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: Colors.card,
+          borderTopColor: Colors.cardBorder,
+          borderTopWidth: 1,
+        },
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.textMuted,
+      }}
+    >
+      <Tabs.Screen name="index" options={{ title: 'Home', tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="workouts" options={{ title: 'Workouts', tabBarIcon: ({ color, size }) => <Ionicons name="barbell-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="targets" options={{ title: 'Targets', tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="insights" options={{ title: 'Insights', tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart-outline" size={size} color={color} /> }} />
+      <Tabs.Screen name="profile" options={{ title: 'Profile', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" size={size} color={color} /> }} />
+    </Tabs>
   );
 }

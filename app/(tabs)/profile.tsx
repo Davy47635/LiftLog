@@ -1,12 +1,11 @@
-import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
-import { useTheme } from '@/constants/themecontext';
+import { DarkColors, LightColors } from '@/constants/theme';
 import { db } from '@/db/index';
 import { users } from '@/db/schema';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eq } from 'drizzle-orm';
 import { router } from 'expo-router';
-import { useContext } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import {
     Alert,
     StyleSheet,
@@ -19,7 +18,21 @@ import { AuthContext } from '../_layout';
 
 export default function ProfileScreen() {
     const auth = useContext(AuthContext);
-    const { isDark, toggleTheme, colors } = useTheme();
+    const [isDark, setIsDark] = useState(true);
+
+    useEffect(() => {
+        AsyncStorage.getItem('theme').then((val) => {
+            if (val === 'light') setIsDark(false);
+        });
+    }, []);
+
+    const colors = isDark ? DarkColors : LightColors;
+
+    const toggleTheme = async () => {
+        const next = !isDark;
+        setIsDark(next);
+        await AsyncStorage.setItem('theme', next ? 'dark' : 'light');
+    };
 
     const handleLogout = async () => {
         Alert.alert('Log Out', 'Are you sure you want to log out?', [
@@ -98,12 +111,12 @@ export default function ProfileScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        style={[styles.btn, { backgroundColor: colors.card, borderColor: Colors.danger }]}
+                        style={[styles.btn, { backgroundColor: colors.card, borderColor: colors.danger }]}
                         onPress={handleDeleteAccount}
                         accessibilityLabel="Delete account"
                     >
-                        <Ionicons name="trash-outline" size={20} color={Colors.danger} />
-                        <Text style={[styles.btnText, { color: Colors.danger }]}>Delete Account</Text>
+                        <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                        <Text style={[styles.btnText, { color: colors.danger }]}>Delete Account</Text>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -113,14 +126,14 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
     container: { flex: 1, paddingTop: 60 },
-    header: { paddingHorizontal: Spacing.md, marginBottom: Spacing.lg },
-    title: { fontSize: Fonts.sizes.xxl, fontWeight: '800' },
-    content: { alignItems: 'center', paddingHorizontal: Spacing.lg },
-    avatar: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: Spacing.md },
-    avatarText: { fontSize: Fonts.sizes.xxxl, fontWeight: '800' },
-    name: { fontSize: Fonts.sizes.xl, fontWeight: '800', marginBottom: Spacing.xs },
-    email: { fontSize: Fonts.sizes.md, marginBottom: Spacing.xl },
-    section: { width: '100%', gap: Spacing.sm },
-    btn: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, borderRadius: Radius.md, padding: Spacing.md, borderWidth: 1 },
-    btnText: { fontWeight: '600', fontSize: Fonts.sizes.md },
+    header: { paddingHorizontal: 16, marginBottom: 24 },
+    title: { fontSize: 28, fontWeight: '800' },
+    content: { alignItems: 'center', paddingHorizontal: 24 },
+    avatar: { width: 80, height: 80, borderRadius: 40, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+    avatarText: { fontSize: 36, fontWeight: '800' },
+    name: { fontSize: 22, fontWeight: '800', marginBottom: 4 },
+    email: { fontSize: 15, marginBottom: 32 },
+    section: { width: '100%', gap: 8 },
+    btn: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 12, padding: 16, borderWidth: 1 },
+    btnText: { fontWeight: '600', fontSize: 15 },
 });

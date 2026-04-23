@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { DarkColors, LightColors } from './theme';
 
 type ThemeContextType = {
@@ -29,11 +29,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.setItem('theme', next ? 'dark' : 'light');
     }, [isDark]);
 
-    return (
-        <ThemeContext.Provider value={{ isDark, toggleTheme, colors: isDark ? DarkColors : LightColors }}>
-            {children}
-        </ThemeContext.Provider>
-    );
+    const value = {
+        isDark,
+        toggleTheme,
+        colors: isDark ? DarkColors : LightColors,
+    };
+
+    return React.createElement(ThemeContext.Provider, { value }, children);
 }
 
 export function useTheme() {
