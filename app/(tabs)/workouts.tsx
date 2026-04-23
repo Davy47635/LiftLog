@@ -3,8 +3,8 @@ import { db } from '@/db/index';
 import { categories, workouts } from '@/db/schema';
 import { Ionicons } from '@expo/vector-icons';
 import { desc, eq } from 'drizzle-orm';
-import { router } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useContext, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -48,9 +48,11 @@ export default function WorkoutsScreen() {
         setWorkoutList(rows);
     };
 
-    useEffect(() => {
-        loadWorkouts();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            loadWorkouts();
+        }, [auth?.user])
+    );
 
     const filtered = workoutList.filter((w) =>
         w.categoryName.toLowerCase().includes(search.toLowerCase()) ||

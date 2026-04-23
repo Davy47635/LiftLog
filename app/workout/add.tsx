@@ -2,9 +2,10 @@ import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { db } from '@/db/index';
 import { categories, workouts } from '@/db/schema';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { eq } from 'drizzle-orm';
 import { router } from 'expo-router';
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
     Alert,
     ScrollView,
@@ -14,10 +15,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { AuthContext } from '../_layout';
 
 export default function AddWorkoutScreen() {
-    const auth = useContext(AuthContext);
     const [catList, setCatList] = useState<{ id: number; name: string; colour: string }[]>([]);
     const [selectedCat, setSelectedCat] = useState<number | null>(null);
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -27,11 +26,12 @@ export default function AddWorkoutScreen() {
 
     useEffect(() => {
         const load = async () => {
-            if (!auth?.user) return;
+            const stored = await AsyncStorage.getItem('userId');
+            if (!stored) return;
             const rows = await db
                 .select()
                 .from(categories)
-                .where(eq(categories.userId, auth.user.id));
+                .where(eq(categories.userId, parseInt(stored)));
             setCatList(rows);
             if (rows.length > 0) setSelectedCat(rows[0].id);
         };
@@ -41,11 +41,12 @@ export default function AddWorkoutScreen() {
     const handleSave = async () => {
         if (!selectedCat) { Alert.alert('Error', 'Please select a category'); return; }
         if (!duration || isNaN(Number(duration))) { Alert.alert('Error', 'Please enter a valid duration'); return; }
-        if (!auth?.user) return;
+        const stored = await AsyncStorage.getItem('userId');
+        if (!stored) return;
         setLoading(true);
         try {
             await db.insert(workouts).values({
-                userId: auth.user.id,
+                userId: parseInt(stored),
                 categoryId: selectedCat,
                 date,
                 durationMins: parseInt(duration),
@@ -54,6 +55,7 @@ export default function AddWorkoutScreen() {
             });
             router.back();
         } catch (e) {
+            console.error(e);
             Alert.alert('Error', 'Could not save workout');
         } finally {
             setLoading(false);
