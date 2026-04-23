@@ -8,6 +8,7 @@ import { useCallback, useContext, useState } from 'react';
 import {
     Alert,
     FlatList,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
@@ -25,10 +26,21 @@ type WorkoutWithCategory = {
     categoryColour: string;
 };
 
+type Category = {
+    id: number;
+    name: string;
+    colour: string;
+};
+
 export default function WorkoutsScreen() {
     const auth = useContext(AuthContext);
     const [workoutList, setWorkoutList] = useState<WorkoutWithCategory[]>([]);
+    const [catList, setCatList] = useState<Category[]>([]);
     const [search, setSearch] = useState('');
+    const [selectedCat, setSelectedCat] = useState<number | null>(null);
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
 
     const loadWorkouts = async () => {
         if (!auth?.user) return;
@@ -46,6 +58,12 @@ export default function WorkoutsScreen() {
             .where(eq(workouts.userId, auth.user.id))
             .orderBy(desc(workouts.date));
         setWorkoutList(rows);
+
+        const cats = await db
+            .select()
+            .from(categories)
+            .where(eq(categories.userId, auth.user.id));
+        setCatList(cats);
     };
 
     useFocusEffect(
@@ -54,10 +72,15 @@ export default function WorkoutsScreen() {
         }, [auth?.user])
     );
 
-    const filtered = workoutList.filter((w) =>
-        w.categoryName.toLowerCase().includes(search.toLowerCase()) ||
-        (w.notes?.toLowerCase().includes(search.toLowerCase()) ?? false)
-    );
+    const filtered = workoutList.filter((w) => {
+        const matchesSearch =
+            w.categoryName.toLowerCase().includes(search.toLowerCase()) ||
+            (w.notes?.toLowerCase().includes(search.toLowerCase()) ?? false);
+        const matchesCat = selectedCat === null || w.categoryName === catList.find(c => c.id === selectedCat)?.name;
+        const matchesFrom = dateFrom === '' || w.date >= dateFrom;
+        const matchesTo = dateTo === '' || w.date <= dateTo;
+        return matchesSearch && matchesCat && matchesFrom && matchesTo;
+    });
 
     const deleteWorkout = async (id: number) => {
         Alert.alert('Delete Workout', 'Are you sure?', [
@@ -78,17 +101,33 @@ export default function WorkoutsScreen() {
         return d.toLocaleDateString('en-IE', { day: 'numeric', month: 'short', year: 'numeric' });
     };
 
+    const clearFilters = () => {
+        setSelectedCat(null);
+        setDateFrom('');
+        setDateTo('');
+        setSearch('');
+    };
+
     return (
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Workouts</Text>
-                <TouchableOpacity
-                    style={styles.addBtn}
-                    onPress={() => router.push('/workout/add')}
-                    accessibilityLabel="Add workout"
-                >
-                    <Ionicons name="add" size={24} color={Colors.background} />
-                </TouchableOpacity>
+                <View style={styles.headerRight}>
+                    <TouchableOpacity
+                        style={styles.filterBtn}
+                        onPress={() => setShowFilters(!showFilters)}
+                        accessibilityLabel="Toggle filters"
+                    >
+                        <Ionicons name="filter-outline" size={20} color={showFilters ? Colors.primary : Colors.textMuted} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={styles.addBtn}
+                        onPress={() => router.push('/workout/add')}
+                        accessibilityLabel="Add workout"
+                    >
+                        <Ionicons name="add" size={24} color={Colors.background} />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <TextInput
@@ -100,10 +139,59 @@ export default function WorkoutsScreen() {
                 accessibilityLabel="Search workouts"
             />
 
+            {showFilters && (
+                <View style={styles.filterPanel}>
+                    <Text style={styles.filterLabel}>Category</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow}>
+                        <TouchableOpacity
+                            style={[styles.catChip, selectedCat === null && styles.catChipActive]}
+                            onPress={() => setSelectedCat(null)}
+                        >
+                            <Text style={[styles.catChipText, selectedCat === null && styles.catChipTextActive]}>All</Text>
+                        </TouchableOpacity>
+                        {catList.map((cat) => (
+                            <TouchableOpacity
+                                key={cat.id}
+                                style={[styles.catChip, selectedCat === cat.id && { backgroundColor: cat.colour, borderColor: cat.colour }]}
+                                onPress={() => setSelectedCat(cat.id)}
+                            >
+                                <Text style={[styles.catChipText, selectedCat === cat.id && { color: Colors.background }]}>
+                                    {cat.name}
+                                </Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+
+                    <Text style={styles.filterLabel}>Date Range</Text>
+                    <View style={styles.dateRow}>
+                        <TextInput
+                            style={[styles.dateInput]}
+                            placeholder="From YYYY-MM-DD"
+                            placeholderTextColor={Colors.textDim}
+                            value={dateFrom}
+                            onChangeText={setDateFrom}
+                            accessibilityLabel="Date from filter"
+                        />
+                        <TextInput
+                            style={[styles.dateInput]}
+                            placeholder="To YYYY-MM-DD"
+                            placeholderTextColor={Colors.textDim}
+                            value={dateTo}
+                            onChangeText={setDateTo}
+                            accessibilityLabel="Date to filter"
+                        />
+                    </View>
+
+                    <TouchableOpacity onPress={clearFilters} style={styles.clearBtn}>
+                        <Text style={styles.clearBtnText}>Clear Filters</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
             {filtered.length === 0 ? (
                 <View style={styles.empty}>
                     <Ionicons name="barbell-outline" size={48} color={Colors.textDim} />
-                    <Text style={styles.emptyText}>No workouts yet</Text>
+                    <Text style={styles.emptyText}>No workouts found</Text>
                     <Text style={styles.emptySubtext}>Tap + to log your first session</Text>
                 </View>
             ) : (
@@ -140,9 +228,22 @@ export default function WorkoutsScreen() {
 const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background, paddingTop: 60 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, marginBottom: Spacing.md },
+    headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
     title: { fontSize: Fonts.sizes.xxl, fontWeight: '800', color: Colors.text },
     addBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-    search: { marginHorizontal: Spacing.md, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder, borderRadius: Radius.md, padding: Spacing.md, color: Colors.text, marginBottom: Spacing.md },
+    filterBtn: { padding: Spacing.xs },
+    search: { marginHorizontal: Spacing.md, backgroundColor: Colors.card, borderWidth: 1, borderColor: Colors.cardBorder, borderRadius: Radius.md, padding: Spacing.md, color: Colors.text, marginBottom: Spacing.sm },
+    filterPanel: { marginHorizontal: Spacing.md, backgroundColor: Colors.card, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.cardBorder },
+    filterLabel: { fontSize: Fonts.sizes.xs, color: Colors.textMuted, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 1, marginBottom: Spacing.xs },
+    catRow: { marginBottom: Spacing.md },
+    catChip: { borderWidth: 1, borderColor: Colors.cardBorder, borderRadius: Radius.full, paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, marginRight: Spacing.sm, backgroundColor: Colors.background },
+    catChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+    catChipText: { color: Colors.text, fontSize: Fonts.sizes.sm, fontWeight: '600' },
+    catChipTextActive: { color: Colors.background },
+    dateRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.sm },
+    dateInput: { flex: 1, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.cardBorder, borderRadius: Radius.sm, padding: Spacing.sm, color: Colors.text, fontSize: Fonts.sizes.xs },
+    clearBtn: { alignSelf: 'flex-end' },
+    clearBtnText: { color: Colors.danger, fontSize: Fonts.sizes.sm, fontWeight: '600' },
     empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.sm },
     emptyText: { color: Colors.textMuted, fontSize: Fonts.sizes.lg, fontWeight: '600' },
     emptySubtext: { color: Colors.textDim, fontSize: Fonts.sizes.sm },
