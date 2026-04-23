@@ -4,7 +4,7 @@ import { categories, targets, workouts } from '@/db/schema';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { and, eq, gte } from 'drizzle-orm';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
     Alert,
@@ -57,7 +57,7 @@ export default function TargetsScreen() {
                 ? weekStart.toISOString().split('T')[0]
                 : monthStart.toISOString().split('T')[0];
 
-            let query = db
+            const allWorkouts = await db
                 .select()
                 .from(workouts)
                 .where(
@@ -67,7 +67,6 @@ export default function TargetsScreen() {
                     )
                 );
 
-            const allWorkouts = await query;
             const filtered = t.categoryId
                 ? allWorkouts.filter((w) => w.categoryId === t.categoryId)
                 : allWorkouts;
@@ -115,6 +114,13 @@ export default function TargetsScreen() {
         <View style={styles.container}>
             <View style={styles.header}>
                 <Text style={styles.title}>Targets</Text>
+                <TouchableOpacity
+                    style={styles.addBtn}
+                    onPress={() => router.push('/target/add')}
+                    accessibilityLabel="Add target"
+                >
+                    <Ionicons name="add" size={24} color={Colors.background} />
+                </TouchableOpacity>
             </View>
 
             <ScrollView contentContainerStyle={{ padding: Spacing.md, paddingBottom: 100 }}>
@@ -168,6 +174,7 @@ const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background, paddingTop: 60 },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.md, marginBottom: Spacing.md },
     title: { fontSize: Fonts.sizes.xxl, fontWeight: '800', color: Colors.text },
+    addBtn: { backgroundColor: Colors.primary, borderRadius: Radius.full, width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
     empty: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: Spacing.sm, marginTop: 100 },
     emptyText: { color: Colors.textMuted, fontSize: Fonts.sizes.lg, fontWeight: '600' },
     card: { backgroundColor: Colors.card, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.md, borderWidth: 1, borderColor: Colors.cardBorder },
