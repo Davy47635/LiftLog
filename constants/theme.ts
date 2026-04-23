@@ -1,4 +1,18 @@
-export const Colors = {
+export const LightColors = {
+  background: '#F2F2F7',
+  card: '#FFFFFF',
+  cardBorder: '#E5E5EA',
+  primary: '#4F6EF7',
+  primaryDark: '#3A57D4',
+  text: '#000000',
+  textMuted: '#6C6C70',
+  textDim: '#AEAEB2',
+  danger: '#FF3B5C',
+  success: '#30D158',
+  warning: '#FF9F0A',
+};
+
+export const DarkColors = {
   background: '#0A0A0A',
   card: '#141414',
   cardBorder: '#222222',
@@ -11,6 +25,8 @@ export const Colors = {
   success: '#30D158',
   warning: '#FF9F0A',
 };
+
+export const Colors = DarkColors;
 
 export const Fonts = {
   sizes: {
