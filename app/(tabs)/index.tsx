@@ -23,11 +23,35 @@ type RecentWorkout = {
   categoryColour: string;
 };
 
+function calculateStreak(dates: string[]): number {
+  if (dates.length === 0) return 0;
+
+  const sorted = [...new Set(dates)].sort().reverse();
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+  if (sorted[0] !== today && sorted[0] !== yesterday) return 0;
+
+  let streak = 1;
+  for (let i = 1; i < sorted.length; i++) {
+    const curr = new Date(sorted[i - 1]);
+    const prev = new Date(sorted[i]);
+    const diff = Math.round((curr.getTime() - prev.getTime()) / 86400000);
+    if (diff === 1) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 export default function HomeScreen() {
   const auth = useContext(AuthContext);
   const [recent, setRecent] = useState<RecentWorkout[]>([]);
   const [totalWorkouts, setTotalWorkouts] = useState(0);
   const [weeklyCount, setWeeklyCount] = useState(0);
+  const [streak, setStreak] = useState(0);
 
   const load = async () => {
     const stored = await AsyncStorage.getItem('userId');
@@ -56,6 +80,9 @@ export default function HomeScreen() {
     const weekStartStr = weekStart.toISOString().split('T')[0];
     const thisWeek = allWorkouts.filter((w) => w.date >= weekStartStr);
     setWeeklyCount(thisWeek.length);
+
+    const streakVal = calculateStreak(allWorkouts.map((w) => w.date));
+    setStreak(streakVal);
   };
 
   useFocusEffect(
@@ -87,6 +114,16 @@ export default function HomeScreen() {
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{totalWorkouts}</Text>
             <Text style={styles.statLabel}>Total sessions</Text>
+          </View>
+        </View>
+
+        <View style={[styles.streakCard, streak > 0 && styles.streakCardActive]}>
+          <Text style={styles.streakEmoji}>{streak > 0 ? '🔥' : '💤'}</Text>
+          <View>
+            <Text style={styles.streakValue}>{streak} day streak</Text>
+            <Text style={styles.streakLabel}>
+              {streak > 0 ? 'Keep it up!' : 'Log a workout to start your streak'}
+            </Text>
           </View>
         </View>
 
@@ -134,10 +171,15 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: Spacing.md, marginBottom: Spacing.lg },
   greeting: { fontSize: Fonts.sizes.md, color: Colors.textMuted },
   name: { fontSize: Fonts.sizes.xxl, fontWeight: '800', color: Colors.text },
-  statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg },
+  statsRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
   statCard: { flex: 1, backgroundColor: Colors.card, borderRadius: Radius.md, padding: Spacing.md, alignItems: 'center', borderWidth: 1, borderColor: Colors.cardBorder },
   statValue: { fontSize: Fonts.sizes.xxxl, fontWeight: '800', color: Colors.primary },
   statLabel: { fontSize: Fonts.sizes.sm, color: Colors.textMuted, marginTop: 4 },
+  streakCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: Colors.card, borderRadius: Radius.md, padding: Spacing.md, marginBottom: Spacing.lg, borderWidth: 1, borderColor: Colors.cardBorder },
+  streakCardActive: { borderColor: Colors.warning },
+  streakEmoji: { fontSize: 36 },
+  streakValue: { fontSize: Fonts.sizes.lg, fontWeight: '800', color: Colors.text },
+  streakLabel: { fontSize: Fonts.sizes.sm, color: Colors.textMuted, marginTop: 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
   sectionTitle: { fontSize: Fonts.sizes.lg, fontWeight: '700', color: Colors.text },
   seeAll: { fontSize: Fonts.sizes.sm, color: Colors.primary, fontWeight: '600' },
